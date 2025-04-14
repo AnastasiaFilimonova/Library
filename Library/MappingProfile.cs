@@ -12,6 +12,8 @@ namespace Library
         {
             CreateMap<Book, BookDTO>();
             CreateMap<BookDTO, Book>()
+                .ForMember(dest => dest.AuthorID, opt => opt.Ignore())
+                .ForMember(dest => dest.GenreID, opt => opt.Ignore());
         }
     }
 }

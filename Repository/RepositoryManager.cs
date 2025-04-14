@@ -12,9 +12,14 @@ namespace Repository
     {
         private RepositoryContext _repositoryContext;
         private IBookRepository _bookRepository;
+        private readonly IAuthorRepository _authorRepository;
+        private readonly IGenreRepository _genreRepository;
         public RepositoryManager(RepositoryContext repositoryContext)
         {
             _repositoryContext = repositoryContext;
+            _bookRepository = new BookRepository(repositoryContext);
+            _authorRepository = new AuthorRepository(repositoryContext);
+            _genreRepository = new GenreRepository(repositoryContext);
         }
         public IBookRepository Book
         {
@@ -25,6 +30,8 @@ namespace Repository
                 return _bookRepository;
             }
         }
+        public IAuthorRepository Author => _authorRepository;
+        public IGenreRepository Genre => _genreRepository;
         public void Save() => _repositoryContext.SaveChanges();
     }
 }

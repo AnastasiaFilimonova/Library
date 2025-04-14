@@ -9,8 +9,8 @@ namespace Entities.DataTransferObject
     public class BookDTO
     {
         public string Title { get; set; }
-        public int AuthorName { get; set; } 
-        public int GenreName { get; set; }
+        public string AuthorName { get; set; } 
+        public string GenreName { get; set; }
         public string Image { get; set; }
 
         public int PageCount { get; set; }

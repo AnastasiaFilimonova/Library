@@ -9,6 +9,8 @@ namespace Contracts
     public interface IRepositoryManager
     {
         IBookRepository Book { get; }
+        IAuthorRepository Author { get; }
+        IGenreRepository Genre { get; }
         void Save();
     }
 }
