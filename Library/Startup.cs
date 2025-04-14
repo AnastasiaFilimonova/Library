@@ -2,6 +2,8 @@ using Library.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
 using NLog;
 using Library.Extensions;
+using Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Library;
 
@@ -21,10 +23,13 @@ public class Startup
         services.ConfigureCors();
         services.ConfigureIISIntegration();
         services.ConfigureLoggerService();
-
+        services.ConfigureSqlContext(Configuration);
+        services.AddDbContext<RepositoryContext>(options => options.UseSqlite(Configuration.GetConnectionString("DefaultConnection")));
+        services.ConfigureRepositoryManager();
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
+        services.AddAutoMapper(typeof(Startup));
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

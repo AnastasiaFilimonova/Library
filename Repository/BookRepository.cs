@@ -1,0 +1,23 @@
+﻿using Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using Contracts;
+using Library.Models;
+
+namespace Repository
+{
+    public class BookRepository : RepositoryBase<Book>, IBookRepository
+    {
+        public BookRepository(RepositoryContext repositoryContext)
+        : base(repositoryContext)
+        {
+        }
+        public IEnumerable<Book> GetAllBooks(bool trackChanges) => FindAll(trackChanges).OrderBy(c => c.Title).ToList();
+        public void CreateBook(Book book) => Create(book);
+
+    }
+}
