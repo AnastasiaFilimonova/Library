@@ -11,6 +11,8 @@ namespace Contracts
         IBookRepository Book { get; }
         IAuthorRepository Author { get; }
         IGenreRepository Genre { get; }
+        IReadingStatusRepository ReadingStatus { get; }
+
         void Save();
     }
 }

@@ -15,6 +15,6 @@ namespace Contracts
         IEnumerable<Book> GetAllBooks(bool trackChanges);
         void CreateBook(Book book);
         IQueryable<Book> FindByCondition(Expression<Func<Book, bool>> expression, bool trackChanges);
-
     }
 }
+

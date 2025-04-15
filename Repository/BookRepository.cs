@@ -20,12 +20,7 @@ namespace Repository
         }
         public IEnumerable<Book> GetAllBooks(bool trackChanges) => FindAll(trackChanges).OrderBy(c => c.Title).ToList();
         public void CreateBook(Book book) => Create(book);
-        public IQueryable<Book> FindByCondition(Expression<Func<Book, bool>> expression, bool trackChanges)
-        {
-            return trackChanges
-                ? RepositoryContext.Books.Where(expression)
-                : RepositoryContext.Books.AsNoTracking().Where(expression);
-        }
+        
 
     }
 }

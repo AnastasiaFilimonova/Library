@@ -10,10 +10,14 @@ namespace Library
     {
         public MappingProfile()
         {
-            CreateMap<Book, BookDTO>();
+            CreateMap<Book, BookDTO>()
+            .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Author.AuthorName))
+            .ForMember(dest => dest.GenreName, opt => opt.MapFrom(src => src.Genre.GenreName));
+
             CreateMap<BookDTO, Book>()
-                .ForMember(dest => dest.AuthorID, opt => opt.Ignore())
-                .ForMember(dest => dest.GenreID, opt => opt.Ignore());
+                .ForMember(dest => dest.Author, opt => opt.Ignore())
+                .ForMember(dest => dest.Genre, opt => opt.Ignore());
+
         }
     }
 }

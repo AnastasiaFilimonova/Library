@@ -9,7 +9,8 @@ namespace Contracts
 {
     public interface IGenreRepository
     {
-        Genre GetGenreByName(string genreName);
+        Genre GetGenreByName(string name, bool trackChanges);
         void CreateGenre(Genre genre);
     }
+
 }
