@@ -18,9 +18,15 @@ namespace Repository
         : base(repositoryContext)
         {
         }
-        public IEnumerable<Book> GetAllBooks(bool trackChanges) => FindAll(trackChanges).OrderBy(c => c.Title).ToList();
-        public void CreateBook(Book book) => Create(book);
         
+        public void CreateBook(Book book) => Create(book);
+        public void DeleteBook (Book book) => Delete(book);
+        public IEnumerable<Book> GetAllBooks(bool trackChanges) =>
+    FindAll(trackChanges)
+        .Include(b => b.Author)
+        .Include(b => b.Genre)
+        .Include(b => b.ReadingStatus); // ← вот это нужно обязательно!
+
 
     }
 }

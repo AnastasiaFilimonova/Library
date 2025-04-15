@@ -8,7 +8,7 @@ namespace Entities.Models
 {
     public enum ReadingStatusEnum
     {
-        NotRead = 1,
-        Read = 2
+        NotRead = 0,
+        Read = 1
     }
 }

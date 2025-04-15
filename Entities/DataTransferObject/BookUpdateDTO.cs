@@ -8,14 +8,21 @@ namespace Entities.DataTransferObject
 {
     public class BookUpdateDTO
     {
-        public int BookId { get; set; }
+        public string? Title { get; set; }
+        public string? AuthorName { get; set; }
+        public string? GenreName { get; set; }
+        public string? Image { get; set; }
+        public int? PageCount { get; set; }
+        public string? Annotation { get; set; }
 
-        public int? ReadingStatusID { get; set; }  // 1 - не прочитана, 2 - прочитана
+        public int? ReadingStatusID { get; set; }
 
         public int? Rating { get; set; }
-        public string Review { get; set; }
-        public string Quotes { get; set; }
+        public string? Review { get; set; }
+        public string? Quotes { get; set; }
         public DateTime? StartReadingDate { get; set; }
         public DateTime? EndReadingDate { get; set; }
     }
+
+
 }

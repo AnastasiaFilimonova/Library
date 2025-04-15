@@ -11,6 +11,7 @@ namespace Contracts
     {
         IEnumerable<ReadingStatus> GetAllStatuses(bool trackChanges);
         ReadingStatus GetStatusById(int id, bool trackChanges);
+        void CreateReadingStatus(ReadingStatus status);
         void Update(ReadingStatus status);
     }
 }
