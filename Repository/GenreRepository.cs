@@ -14,8 +14,16 @@ namespace Repository
     {
         public GenreRepository(RepositoryContext context) : base(context) { }
 
-        public Genre GetGenreByName(string name, bool trackChanges) =>
-            FindByCondition(g => g.GenreName.ToLower() == name.ToLower(), trackChanges).FirstOrDefault();
+        public Genre GetGenreByName(string name, bool trackChanges)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            var normalized = name.Trim().ToLower();
+            return FindByCondition(g => g.GenreName.Trim().ToLower() == normalized, trackChanges).FirstOrDefault();
+        }
+
+
 
         public void CreateGenre(Genre genre) => Create(genre);
     }

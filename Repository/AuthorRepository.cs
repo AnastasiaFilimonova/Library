@@ -18,8 +18,15 @@ namespace Repository
         {
         }
 
-        public Author GetAuthorByName(string name, bool trackChanges) =>
-            FindByCondition(a => a.AuthorName == name, trackChanges).FirstOrDefault();
+        public Author GetAuthorByName(string name, bool trackChanges)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            var normalized = name.Trim().ToLower();
+            return FindByCondition(a => a.AuthorName.Trim().ToLower() == normalized, trackChanges).FirstOrDefault();
+        }
+
 
         public void CreateAuthor(Author author) => Create(author);
 

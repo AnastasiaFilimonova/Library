@@ -3,6 +3,7 @@ using System;
 using Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Library.Migrations
 {
     [DbContext(typeof(RepositoryContext))]
-    partial class RepositoryContextModelSnapshot : ModelSnapshot
+    [Migration("20250416090741_MakeTitleNullable")]
+    partial class MakeTitleNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");
@@ -41,6 +44,7 @@ namespace Library.Migrations
                         .HasColumnName("BookID");
 
                     b.Property<string>("Annotation")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("AuthorID")
@@ -50,6 +54,7 @@ namespace Library.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Image")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("PageCount")
@@ -127,9 +132,6 @@ namespace Library.Migrations
 
                     b.Property<DateTime?>("StartReadingDate")
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

@@ -6,7 +6,7 @@ namespace Library.Models
     {
         [Column("ReadingStatusID")]
         public int Id { get; set; }
-
+        public int Status { get; set; }
         public int Rating { get; set; }
         public string Review { get; set; }
         public string Quotes { get; set; }

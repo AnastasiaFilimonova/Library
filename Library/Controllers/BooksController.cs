@@ -24,21 +24,15 @@ namespace Library.Controllers
             _logger = logger;
             _mapper = mapper;
         }
-       
+
         [HttpGet]
         public IActionResult GetBooks()
         {
             try
             {
                 var books = _repository.Book.GetAllBooks(trackChanges: false);
-                var result = books.Select(book => new
-                {
-                    book.Id,
-                    book.Title,
-                    AuthorName = book.Author?.AuthorName,
-                    Status = book.ReadingStatusID == (int)ReadingStatusEnum.Read ? "Прочитана" : "Не прочитана"
-                });
-                return Ok(result);
+                var booksDto = _mapper.Map<IEnumerable<BookListDTO>>(books);
+                return Ok(booksDto);
             }
             catch (Exception ex)
             {
@@ -47,28 +41,14 @@ namespace Library.Controllers
             }
         }
 
+
         [HttpGet("{id}")]
         public IActionResult GetBookById(int id)
         {
             var book = _repository.Book.GetAllBooks(false).FirstOrDefault(b => b.Id == id);
             if (book == null) return NotFound("Книга не найдена.");
-            var dto = new BookDetailsDTO
-            {
-                Id = book.Id,
-                Title = book.Title,
-                AuthorName = book.Author?.AuthorName,
-                GenreName = book.Genre?.GenreName,
-                Image = book.Image,
-                PageCount = book.PageCount,
-                Annotation = book.Annotation,
-                ReadingStatusID = book.ReadingStatusID,
-                ReadingStatusName = book.ReadingStatusID == (int)ReadingStatusEnum.Read ? "Прочитана" : "Не прочитана",
-                Rating = book.ReadingStatus?.Rating,
-                Review = book.ReadingStatus?.Review,
-                Quotes = book.ReadingStatus?.Quotes,
-                StartReadingDate = book.ReadingStatus?.StartReadingDate,
-                EndReadingDate = book.ReadingStatus?.EndReadingDate
-            };
+
+            var dto = _mapper.Map<BookDetailsDTO>(book);
             return Ok(dto);
         }
 
@@ -82,6 +62,7 @@ namespace Library.Controllers
                     _logger.LogError("BookDTO object is null.");
                     return BadRequest("Book data is null.");
                 }
+
                 var author = _repository.Author.GetAuthorByName(bookDTO.AuthorName, trackChanges: false);
                 if (author == null)
                 {
@@ -89,6 +70,7 @@ namespace Library.Controllers
                     _repository.Author.CreateAuthor(author);
                     _repository.Save();
                 }
+                bookDTO.GenreName = bookDTO.GenreName?.Trim();
                 var genre = _repository.Genre.GetGenreByName(bookDTO.GenreName, trackChanges: false);
                 if (genre == null)
                 {
@@ -96,21 +78,17 @@ namespace Library.Controllers
                     _repository.Genre.CreateGenre(genre);
                     _repository.Save();
                 }
+
                 var existingBook = _repository.Book.FindByCondition(b => b.Title == bookDTO.Title && b.AuthorID == author.Id, trackChanges: false).FirstOrDefault();
                 if (existingBook != null)
                 {
                     return Conflict("Такая книга уже есть в вашей библиотеке.");
                 }
-                var book = new Book
-                {
-                    Title = bookDTO.Title,
-                    AuthorID = author.Id,
-                    GenreID = genre.Id,
-                    Image = bookDTO.Image,
-                    PageCount = bookDTO.PageCount,
-                    Annotation = bookDTO.Annotation,
-                    ReadingStatusID = null
-                };
+
+                var book = _mapper.Map<Book>(bookDTO);
+                book.AuthorID = author.Id;
+                book.GenreID = genre.Id;
+                book.ReadingStatusID = null;
 
                 _repository.Book.CreateBook(book);
                 _repository.Save();
@@ -129,34 +107,26 @@ namespace Library.Controllers
             }
         }
 
-        [HttpPatch("{id}")]
-        public IActionResult PatchBook(int id, [FromBody] BookUpdateDTO updateDto)
+        [HttpPost("update/{id}")]
+        public IActionResult UpdateBook(int id, [FromBody] BookUpdateDTO updateDto)
         {
             try
             {
                 var book = _repository.Book.GetAllBooks(true).FirstOrDefault(b => b.Id == id);
                 if (book == null)
                     return NotFound("Книга не найдена.");
-                if (updateDto.ReadingStatusID.HasValue)
-                {
-                    book.ReadingStatusID = updateDto.ReadingStatusID;
-                }
-                bool isRead = book.ReadingStatusID == (int)ReadingStatusEnum.Read;
-                if (!isRead)
+
+                // Проверка, что книга прочитана (enum используется напрямую)
+                if (updateDto.Status != 1)
                 {
                     return BadRequest("Редактирование доступно только для прочитанных книг.");
                 }
-                if (!string.IsNullOrWhiteSpace(updateDto.Title))
-                    book.Title = updateDto.Title;
 
-                if (!string.IsNullOrWhiteSpace(updateDto.Annotation))
-                    book.Annotation = updateDto.Annotation;
 
-                if (!string.IsNullOrWhiteSpace(updateDto.Image))
-                    book.Image = updateDto.Image;
-
-                if (updateDto.PageCount.HasValue)
-                    book.PageCount = updateDto.PageCount.Value;
+                // Обновляем только переданные поля
+                _mapper.Map(updateDto, book);
+                updateDto.AuthorName = updateDto.AuthorName?.Trim();
+               
                 if (!string.IsNullOrWhiteSpace(updateDto.AuthorName))
                 {
                     var author = _repository.Author.GetAuthorByName(updateDto.AuthorName, false);
@@ -168,6 +138,7 @@ namespace Library.Controllers
                     }
                     book.AuthorID = author.Id;
                 }
+                updateDto.GenreName = updateDto.GenreName?.Trim();
                 if (!string.IsNullOrWhiteSpace(updateDto.GenreName))
                 {
                     var genre = _repository.Genre.GetGenreByName(updateDto.GenreName, false);
@@ -180,6 +151,7 @@ namespace Library.Controllers
                     book.GenreID = genre.Id;
                 }
 
+                // Проверка, есть ли смысл создавать/обновлять ReadingStatus
                 bool hasReadingStatusUpdate =
                     updateDto.Rating.HasValue ||
                     !string.IsNullOrWhiteSpace(updateDto.Review) ||
@@ -191,35 +163,23 @@ namespace Library.Controllers
                 {
                     if (book.ReadingStatus == null)
                     {
-                        var readingStatus = new ReadingStatus
-                        {
-                            Rating = updateDto.Rating.GetValueOrDefault(), // 👈 вот тут фикс
-                            Review = updateDto.Review,
-                            Quotes = updateDto.Quotes,
-                            StartReadingDate = updateDto.StartReadingDate,
-                            EndReadingDate = updateDto.EndReadingDate
-                        };
-                        book.ReadingStatus = readingStatus;
+                        var readingStatus = _mapper.Map<ReadingStatus>(updateDto);
+                        readingStatus.Status = updateDto.Status ?? 1; // устанавливаем статус явно
                         _repository.ReadingStatus.CreateReadingStatus(readingStatus);
+                        _repository.Save();
+
+                        book.ReadingStatus = readingStatus;
+                        book.ReadingStatusID = readingStatus.Id;
                     }
                     else
                     {
-                        if (updateDto.Rating.HasValue)
-                            book.ReadingStatus.Rating = updateDto.Rating.Value;
-
-                        if (!string.IsNullOrWhiteSpace(updateDto.Review))
-                            book.ReadingStatus.Review = updateDto.Review;
-
-                        if (!string.IsNullOrWhiteSpace(updateDto.Quotes))
-                            book.ReadingStatus.Quotes = updateDto.Quotes;
-
-                        if (updateDto.StartReadingDate.HasValue)
-                            book.ReadingStatus.StartReadingDate = updateDto.StartReadingDate;
-
-                        if (updateDto.EndReadingDate.HasValue)
-                            book.ReadingStatus.EndReadingDate = updateDto.EndReadingDate;
+                        _mapper.Map(updateDto, book.ReadingStatus);
+                        if (updateDto.Status.HasValue)
+                            book.ReadingStatus.Status = updateDto.Status.Value;
                     }
                 }
+
+
                 _repository.Save();
 
                 return Ok("Книга успешно обновлена.");
@@ -230,7 +190,10 @@ namespace Library.Controllers
                 return StatusCode(500, "Внутренняя ошибка сервера");
             }
         }
- 
+
+
+
+
         [HttpDelete("{id}")]
         public IActionResult DeleteBook(int id)
         {

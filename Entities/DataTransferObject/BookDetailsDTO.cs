@@ -16,7 +16,7 @@ namespace Entities.DataTransferObject
         public int PageCount { get; set; }
         public string Annotation { get; set; }
 
-        public int? ReadingStatusID { get; set; }
+        //public int? ReadingStatusID { get; set; }
         public string ReadingStatusName { get; set; }
 
         public int? Rating { get; set; }

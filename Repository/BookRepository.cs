@@ -22,10 +22,13 @@ namespace Repository
         public void CreateBook(Book book) => Create(book);
         public void DeleteBook (Book book) => Delete(book);
         public IEnumerable<Book> GetAllBooks(bool trackChanges) =>
-    FindAll(trackChanges)
+    RepositoryContext.Books
         .Include(b => b.Author)
         .Include(b => b.Genre)
-        .Include(b => b.ReadingStatus); // ← вот это нужно обязательно!
+        .Include(b => b.ReadingStatus)
+        .ToList();
+
+
 
 
     }
