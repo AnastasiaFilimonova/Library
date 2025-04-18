@@ -16,17 +16,12 @@ namespace Entities.DataTransferObject
         public int? PageCount { get; set; }
         public string? Annotation { get; set; }
 
-        public int? Status { get; set; }
-
-
-
-
+        public int? Status { get; set; } // 0 или 1
         public int? Rating { get; set; }
         public string? Review { get; set; }
         public string? Quotes { get; set; }
         public DateTime? StartReadingDate { get; set; }
         public DateTime? EndReadingDate { get; set; }
     }
-
 
 }

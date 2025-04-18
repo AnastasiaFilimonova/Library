@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,6 +24,17 @@ namespace Repository
             return FindByCondition(g => g.GenreName.Trim().ToLower() == normalized, trackChanges).FirstOrDefault();
         }
 
+        public IQueryable<Book> FindByCondition(Expression<Func<Book, bool>> expression, bool trackChanges) =>
+    trackChanges
+        ? RepositoryContext.Books
+            .Include(b => b.Author)
+            .Include(b => b.Genre)
+            .Where(expression)
+        : RepositoryContext.Books
+            .Include(b => b.Author)
+            .Include(b => b.Genre)
+            .AsNoTracking()
+            .Where(expression);
 
 
         public void CreateGenre(Genre genre) => Create(genre);

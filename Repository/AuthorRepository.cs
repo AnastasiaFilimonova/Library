@@ -27,6 +27,12 @@ namespace Repository
             return FindByCondition(a => a.AuthorName.Trim().ToLower() == normalized, trackChanges).FirstOrDefault();
         }
 
+        public IQueryable<Book> FindByCondition(Expression<Func<Book, bool>> expression, bool trackChanges) =>
+    trackChanges
+        ? RepositoryContext.Books.Include(b => b.Author).Where(expression)
+        : RepositoryContext.Books.Include(b => b.Author).AsNoTracking().Where(expression);
+
+
 
         public void CreateAuthor(Author author) => Create(author);
 
