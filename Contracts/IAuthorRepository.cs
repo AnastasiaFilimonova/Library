@@ -13,6 +13,7 @@ namespace Contracts
         Author GetAuthorByName(string name, bool trackChanges);
         void CreateAuthor(Author author);
         IQueryable<Author> FindByCondition(Expression<Func<Author, bool>> expression, bool trackChanges);
+        Author GetOrCreateAuthor(string name);
     }
 
 }

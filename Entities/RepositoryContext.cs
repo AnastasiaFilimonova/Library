@@ -31,6 +31,15 @@ namespace Entities
             modelBuilder.Entity<Wishlist>().HasKey(w => new { w.UserID, w.BookID });
             modelBuilder.Entity<Wishlist>().HasOne(w => w.User).WithMany(u => u.Wishlist).HasForeignKey(w => w.UserID);
             modelBuilder.Entity<Wishlist>().HasOne(w => w.Book).WithMany(b => b.Wishlist).HasForeignKey(w => w.BookID);
+
+            modelBuilder.Entity<Author>()
+    .HasIndex(a => a.AuthorName)
+    .IsUnique();
+            modelBuilder.Entity<Genre>()
+    .HasIndex(g => g.GenreName)
+    .IsUnique();
+
+
         }
     }
 }

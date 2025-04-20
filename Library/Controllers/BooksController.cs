@@ -2,6 +2,7 @@
 using Contracts;
 using Entities.DataTransferObject;
 using Entities.Models;
+using Entities.RequestFeatures;
 using Library.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -52,60 +53,50 @@ namespace Library.Controllers
             return Ok(dto);
         }
 
+
         [HttpPost]
         public IActionResult CreateBook([FromBody] BookDTO bookDTO)
         {
-            try
+            if (bookDTO == null)
+                return BadRequest("Некорректные данные книги.");
+
+            // 🔍 Используем уже реализованные методы, которые нормализуют строки и ищут в БД
+            var author = _repository.Author.GetAuthorByName(bookDTO.AuthorName, false);
+            var genre = _repository.Genre.GetGenreByName(bookDTO.GenreName, false);
+
+            if (author == null || genre == null)
+                return BadRequest("Автор или жанр не найдены. Добавьте их сначала.");
+
+            // 🔁 Проверяем наличие книги по названию и автору
+            var normalizedTitle = bookDTO.Title?.Trim().ToLower();
+            var existingBook = _repository.Book.GetAllBooks(false)
+                .FirstOrDefault(b =>
+                    b.Title.ToLower().Trim() == normalizedTitle &&
+                    b.AuthorID == author.Id);
+
+            if (existingBook != null)
+                return Conflict("Такая книга уже существует");
+
+            // 🧱 Маппим DTO → сущность
+            var book = _mapper.Map<Book>(bookDTO);
+            book.AuthorID = author.Id;
+            book.GenreID = genre.Id;
+
+            _repository.Book.CreateBook(book);
+            _repository.Save();
+
+            return Ok(new
             {
-                if (bookDTO == null)
-                {
-                    _logger.LogError("BookDTO object is null.");
-                    return BadRequest("Book data is null.");
-                }
+                book.Id,
+                Status = "Не прочитана",
+                Message = "Книга успешно добавлена в библиотеку!"
+            });
 
-                var author = _repository.Author.GetAuthorByName(bookDTO.AuthorName, trackChanges: false);
-                if (author == null)
-                {
-                    author = new Author { AuthorName = bookDTO.AuthorName };
-                    _repository.Author.CreateAuthor(author);
-                    _repository.Save();
-                }
-                bookDTO.GenreName = bookDTO.GenreName?.Trim();
-                var genre = _repository.Genre.GetGenreByName(bookDTO.GenreName, trackChanges: false);
-                if (genre == null)
-                {
-                    genre = new Genre { GenreName = bookDTO.GenreName };
-                    _repository.Genre.CreateGenre(genre);
-                    _repository.Save();
-                }
-
-                var existingBook = _repository.Book.FindByCondition(b => b.Title == bookDTO.Title && b.AuthorID == author.Id, trackChanges: false).FirstOrDefault();
-                if (existingBook != null)
-                {
-                    return Conflict("Такая книга уже есть в вашей библиотеке.");
-                }
-
-                var book = _mapper.Map<Book>(bookDTO);
-                book.AuthorID = author.Id;
-                book.GenreID = genre.Id;
-                book.ReadingStatusID = null;
-
-                _repository.Book.CreateBook(book);
-                _repository.Save();
-
-                return Ok(new
-                {
-                    book.Id,
-                    Status = "Не прочитана",
-                    Message = "Книга успешно добавлена в библиотеку!"
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Ошибка в методе CreateBook: {ex}");
-                return StatusCode(500, "Внутренняя ошибка сервера");
-            }
         }
+
+
+
+
 
         [HttpPost("update/{id}")]
         public IActionResult UpdateBook(int id, [FromBody] BookUpdateDTO updateDto)
@@ -214,6 +205,30 @@ namespace Library.Controllers
                 return StatusCode(500, "Ошибка сервера");
             }
         }
+
+
+
+        [HttpGet("filter")]
+        public IActionResult FilterBooks([FromQuery] BookParameters bookParams)
+        {
+            var books = _repository.Book.GetFilteredBooks(bookParams, trackChanges: false);
+            var booksDto = _mapper.Map<IEnumerable<BookListDTO>>(books);
+
+            // Получаем метаданные и сериализуем
+            var paginationMetaData = new
+            {
+                books.PageNumber,
+                books.PageSize,
+                books.TotalItemCount,
+                books.PageCount,
+                books.HasNextPage,
+                books.HasPreviousPage
+            };
+            return Ok(booksDto);
+        }
+
+
+
     }
 }
    

@@ -12,7 +12,7 @@ namespace Contracts
         IAuthorRepository Author { get; }
         IGenreRepository Genre { get; }
         IReadingStatusRepository ReadingStatus { get; }
-
+        IWishlistRepository Wishlist { get; }
         void Save();
     }
 }

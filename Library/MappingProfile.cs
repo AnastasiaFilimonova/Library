@@ -34,12 +34,18 @@ namespace Library
                .ForMember(dest => dest.ReadingStatusID, opt => opt.Ignore());
 
             CreateMap<BookUpdateDTO, Book>()
-    .ForMember(dest => dest.AuthorID, opt => opt.Ignore())
-    .ForMember(dest => dest.GenreID, opt => opt.Ignore())
-    .ForMember(dest => dest.ReadingStatusID, opt => opt.Ignore())
-    .ForMember(dest => dest.ReadingStatus, opt => opt.Ignore())
-    .ForMember(dest => dest.PageCount, opt => opt.Condition(src => src.PageCount.HasValue))
-    .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+                .ForMember(dest => dest.AuthorID, opt => opt.Ignore())
+                .ForMember(dest => dest.GenreID, opt => opt.Ignore())
+                .ForMember(dest => dest.ReadingStatusID, opt => opt.Ignore())
+                .ForMember(dest => dest.ReadingStatus, opt => opt.Ignore())
+                .ForMember(dest => dest.PageCount, opt => {
+                    opt.PreCondition(src => src.PageCount.HasValue); // ✅ не трогать, если не передано
+                    opt.MapFrom(src => src.PageCount);
+                })
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+
+
 
 
 
@@ -50,6 +56,27 @@ namespace Library
     .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Author.AuthorName))
     .ForMember(dest => dest.Status, opt => opt.MapFrom(src =>
         src.ReadingStatus != null && src.ReadingStatus.Status == 1 ? "Прочитана" : "Не прочитана"));
+
+
+
+
+            CreateMap<Wishlist, WishlistDTO>()
+    .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Book.Title))
+    .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Book.Author.AuthorName))
+    .ForMember(dest => dest.GenreName, opt => opt.MapFrom(src => src.Book.Genre.GenreName));
+
+            CreateMap<NewWishlistDTO, Book>()
+                .ForMember(dest => dest.AuthorID, opt => opt.Ignore())
+                .ForMember(dest => dest.GenreID, opt => opt.Ignore());
+
+            CreateMap<Book, BookListDTO>()
+    .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Author.AuthorName))
+    .ForMember(dest => dest.Status, opt => opt.MapFrom(src =>
+        src.ReadingStatus != null && src.ReadingStatus.Status == (int)ReadingStatusEnum.Read
+            ? "Прочитана"
+            : "Не прочитана"));
+
+
 
         }
     }
