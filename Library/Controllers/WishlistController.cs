@@ -3,6 +3,7 @@ using Contracts;
 using Entities.DataTransferObject;
 using Entities.Models;
 using Library.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +11,7 @@ namespace Library.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class WishlistController : ControllerBase
     {
         private readonly IRepositoryManager _repository;

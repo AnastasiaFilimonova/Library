@@ -4,6 +4,7 @@ using Entities.DataTransferObject;
 using Entities.Models;
 using Entities.RequestFeatures;
 using Library.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -14,6 +15,7 @@ namespace Library.Controllers
 {
     [Route("api/books")]
     [ApiController]
+    [Authorize]
     public class BooksController : ControllerBase
     {
         private readonly IRepositoryManager _repository;
@@ -41,7 +43,6 @@ namespace Library.Controllers
                 return StatusCode(500, "Внутренняя ошибка сервера");
             }
         }
-
 
         [HttpGet("{id}")]
         public IActionResult GetBookById(int id)
@@ -144,11 +145,13 @@ namespace Library.Controllers
 
                 // Проверка, есть ли смысл создавать/обновлять ReadingStatus
                 bool hasReadingStatusUpdate =
-                    updateDto.Rating.HasValue ||
-                    !string.IsNullOrWhiteSpace(updateDto.Review) ||
-                    !string.IsNullOrWhiteSpace(updateDto.Quotes) ||
-                    updateDto.StartReadingDate.HasValue ||
-                    updateDto.EndReadingDate.HasValue;
+    updateDto.Rating.HasValue ||
+    !string.IsNullOrWhiteSpace(updateDto.Review) ||
+    !string.IsNullOrWhiteSpace(updateDto.Quotes) ||
+    updateDto.StartReadingDate.HasValue ||
+    updateDto.EndReadingDate.HasValue ||
+    updateDto.Status.HasValue;
+
 
                 if (hasReadingStatusUpdate)
                 {
@@ -206,6 +209,55 @@ namespace Library.Controllers
             }
         }
 
+
+        [HttpPost("import")]
+        public IActionResult ImportBook([FromBody] GoogleBookDTO bookDto)
+        {
+            if (bookDto == null)
+                return BadRequest("Некорректные данные книги.");
+
+            // Поиск или добавление автора
+            var author = _repository.Author.GetAuthorByName(bookDto.Author, false);
+            if (author == null)
+            {
+                author = new Author { AuthorName = bookDto.Author };
+                _repository.Author.CreateAuthor(author);
+                _repository.Save();
+            }
+
+            // Поиск или добавление жанра
+            var genre = _repository.Genre.GetGenreByName(bookDto.Genre, false);
+            if (genre == null)
+            {
+                genre = new Genre { GenreName = bookDto.Genre };
+                _repository.Genre.CreateGenre(genre);
+                _repository.Save();
+            }
+
+            // Проверка, есть ли уже такая книга
+            var normalizedTitle = bookDto.Title?.Trim().ToLower();
+            var existingBook = _repository.Book.GetAllBooks(false)
+                .FirstOrDefault(b => b.Title.ToLower().Trim() == normalizedTitle && b.AuthorID == author.Id);
+
+            if (existingBook != null)
+                return Conflict("Такая книга уже есть в библиотеке.");
+
+            // Создание новой книги
+            var book = new Book
+            {
+                Title = bookDto.Title,
+                AuthorID = author.Id,
+                GenreID = genre.Id,
+                Annotation = bookDto.Description,
+                PageCount = bookDto.PageCount,
+                Image = bookDto.Image
+            };
+
+            _repository.Book.CreateBook(book);
+            _repository.Save();
+
+            return Ok(new { Message = "Книга импортирована и добавлена в библиотеку.", book.Id });
+        }
 
 
         [HttpGet("filter")]
