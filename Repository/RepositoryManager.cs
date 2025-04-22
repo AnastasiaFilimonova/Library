@@ -15,6 +15,10 @@ namespace Repository
         private readonly IAuthorRepository _authorRepository;
         private readonly IGenreRepository _genreRepository;
         private IReadingStatusRepository _readingStatusRepository;
+        private IListBookRepository _listBook;
+
+        public IListBookRepository ListBook => _listBook ??= new ListBookRepository(_repositoryContext);
+
         public RepositoryManager(RepositoryContext repositoryContext)
         {
             _repositoryContext = repositoryContext;

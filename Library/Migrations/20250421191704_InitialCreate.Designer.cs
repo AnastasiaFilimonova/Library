@@ -3,6 +3,7 @@ using System;
 using Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Library.Migrations
 {
     [DbContext(typeof(RepositoryContext))]
-    partial class RepositoryContextModelSnapshot : ModelSnapshot
+    [Migration("20250421191704_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");
@@ -121,12 +124,14 @@ namespace Library.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Quotes")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Rating")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Review")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("StartReadingDate")
@@ -172,9 +177,6 @@ namespace Library.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("BookID")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Id")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("UserID", "BookID");

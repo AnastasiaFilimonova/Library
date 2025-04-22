@@ -9,9 +9,9 @@ namespace Entities.DataTransferObject
     public class GoogleBookDTO
     {
         public string Title { get; set; }
-        public string Author { get; set; }
-        public string Genre { get; set; }
-        public string Description { get; set; }
+        public string AuthorName { get; set; }
+        public string GenreName { get; set; }
+        public string Annotation { get; set; }
         public int PageCount { get; set; }
         public string Image { get; set; }
     }

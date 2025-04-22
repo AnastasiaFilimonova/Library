@@ -10,7 +10,7 @@ using NLog.Config;
 
 namespace Library.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {
@@ -27,8 +27,17 @@ namespace Library.Controllers
             _context = context;
         }
 
+        /// <summary>
+        /// Регистрирует нового пользователя в системе.
+        /// </summary>
+        /// <param name="userDto">Данные пользователя для регистрации.</param>
+        /// <returns>JWT-токен при успешной регистрации.</returns>
+        /// <response code="200">Пользователь успешно зарегистрирован.</response>
+        /// <response code="400">Пользователь с таким логином уже существует.</response>
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserDTO userDto)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Register([FromBody] RegisterDTO userDto)
         {
             var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Login == userDto.Login);
             if (existingUser != null)
@@ -40,7 +49,7 @@ namespace Library.Controllers
             {
                 Login = userDto.Login,
                 Password = BCrypt.Net.BCrypt.HashPassword(userDto.Password),
-                UserName = userDto.Login
+                UserName = userDto.UserName 
             };
 
             _context.Users.Add(user);
@@ -50,8 +59,17 @@ namespace Library.Controllers
             return Ok(new { token });
         }
 
+        /// <summary>
+        /// Выполняет вход пользователя в систему.
+        /// </summary>
+        /// <param name="loginDto">Данные пользователя для входа.</param>
+        /// <returns>JWT-токен при успешной авторизации.</returns>
+        /// <response code="200">Успешный вход в систему.</response>
+        /// <response code="401">Неверный логин или пароль.</response>
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserDTO loginDto)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> Login([FromBody] LoginDTO loginDto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Login == loginDto.Login);
 

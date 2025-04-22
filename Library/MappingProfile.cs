@@ -61,9 +61,12 @@ namespace Library
 
 
             CreateMap<Wishlist, WishlistDTO>()
+    .ForMember(dest => dest.BookID, opt => opt.MapFrom(src => src.BookID)) // или BookID → BookID
     .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Book.Title))
     .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.Book.Author.AuthorName))
     .ForMember(dest => dest.GenreName, opt => opt.MapFrom(src => src.Book.Genre.GenreName));
+
+
 
             CreateMap<NewWishlistDTO, Book>()
                 .ForMember(dest => dest.AuthorID, opt => opt.Ignore())

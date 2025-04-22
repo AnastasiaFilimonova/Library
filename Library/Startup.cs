@@ -36,8 +36,7 @@ public class Startup
         services.AddScoped<JwtService>();
         services.AddHttpClient();
 
-        // JWT Settings
-        var jwtSettings = Configuration.GetSection("JwtSettings");  // Обновлено на JwtSettings
+        var jwtSettings = Configuration.GetSection("JwtSettings"); 
         var secretKey = jwtSettings.GetValue<string>("SecretKey");
         var key = Encoding.ASCII.GetBytes(secretKey);
 
@@ -63,7 +62,7 @@ public class Startup
         // Swagger + JWT Auth
         services.AddSwaggerGen(c =>
         {
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Specialists API", Version = "v1" });
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Library API", Version = "v1" });
 
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
@@ -116,7 +115,6 @@ public class Startup
 
         app.UseRouting();
 
-        app.UseAuthorization();
         app.UseAuthentication();  
         app.UseAuthorization();
         app.UseEndpoints(endpoints =>

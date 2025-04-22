@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Net;
+using System.Security.Claims;
 using static System.Collections.Specialized.BitVector32;
 
 namespace Library.Controllers
@@ -27,13 +28,22 @@ namespace Library.Controllers
             _logger = logger;
             _mapper = mapper;
         }
-
+        /// <summary>
+        /// Получает список всех книг пользователя.
+        /// </summary>
+        /// <returns>Список книг</returns>
+        /// <response code="200">Успешно возвращён список книг</response>
+        /// <response code="500">Внутренняя ошибка сервера</response>
         [HttpGet]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
         public IActionResult GetBooks()
         {
             try
             {
-                var books = _repository.Book.GetAllBooks(trackChanges: false);
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var books = _repository.Book.GetAllBooks(false)
+                    .Where(b => b.ListBooks.Any(lb => lb.UserID == userId));
                 var booksDto = _mapper.Map<IEnumerable<BookListDTO>>(books);
                 return Ok(booksDto);
             }
@@ -44,31 +54,50 @@ namespace Library.Controllers
             }
         }
 
+        /// <summary>
+        /// Получает подробную информацию о книге по ID.
+        /// </summary>
+        /// <param name="id">ID книги</param>
+        /// <returns>Детали книги</returns>
+        /// <response code="200">Книга найдена</response>
+        /// <response code="404">Книга не найдена</response>
         [HttpGet("{id}")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
         public IActionResult GetBookById(int id)
         {
-            var book = _repository.Book.GetAllBooks(false).FirstOrDefault(b => b.Id == id);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var book = _repository.Book.GetAllBooks(false)
+                .FirstOrDefault(b => b.Id == id && b.ListBooks.Any(lb => lb.UserID == userId));
             if (book == null) return NotFound("Книга не найдена.");
 
             var dto = _mapper.Map<BookDetailsDTO>(book);
             return Ok(dto);
         }
 
-
+        /// <summary>
+        /// Добавляет книгу в библиотеку пользователя.
+        /// </summary>
+        /// <param name="bookDTO">Данные книги</param>
+        /// <returns>Результат добавления</returns>
+        /// <response code="200">Книга успешно добавлена или уже существует</response>
+        /// <response code="400">Некорректные данные</response>
         [HttpPost]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         public IActionResult CreateBook([FromBody] BookDTO bookDTO)
         {
             if (bookDTO == null)
                 return BadRequest("Некорректные данные книги.");
 
-            // 🔍 Используем уже реализованные методы, которые нормализуют строки и ищут в БД
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
             var author = _repository.Author.GetAuthorByName(bookDTO.AuthorName, false);
             var genre = _repository.Genre.GetGenreByName(bookDTO.GenreName, false);
 
             if (author == null || genre == null)
                 return BadRequest("Автор или жанр не найдены. Добавьте их сначала.");
 
-            // 🔁 Проверяем наличие книги по названию и автору
             var normalizedTitle = bookDTO.Title?.Trim().ToLower();
             var existingBook = _repository.Book.GetAllBooks(false)
                 .FirstOrDefault(b =>
@@ -76,9 +105,15 @@ namespace Library.Controllers
                     b.AuthorID == author.Id);
 
             if (existingBook != null)
-                return Conflict("Такая книга уже существует");
+            {
+                if (!_repository.ListBook.Exists(userId, existingBook.Id))
+                {
+                    _repository.ListBook.Create(new ListBook { UserID = userId, BookID = existingBook.Id });
+                    _repository.Save();
+                }
+                return Ok(new { existingBook.Id, Status = "Уже добавлена ранее" });
+            }
 
-            // 🧱 Маппим DTO → сущность
             var book = _mapper.Map<Book>(bookDTO);
             book.AuthorID = author.Id;
             book.GenreID = genre.Id;
@@ -86,79 +121,78 @@ namespace Library.Controllers
             _repository.Book.CreateBook(book);
             _repository.Save();
 
-            return Ok(new
-            {
-                book.Id,
-                Status = "Не прочитана",
-                Message = "Книга успешно добавлена в библиотеку!"
-            });
+            _repository.ListBook.Create(new ListBook { UserID = userId, BookID = book.Id });
+            _repository.Save();
 
+            return Ok(new { book.Id, Status = "Не прочитана", Message = "Книга успешно добавлена в библиотеку!" });
         }
 
-
-
-
-
+        /// <summary>
+        /// Обновляет информацию о прочитанной книге.
+        /// </summary>
+        /// <param name="id">ID книги</param>
+        /// <param name="updateDto">Новые данные</param>
+        /// <returns>Результат обновления</returns>
+        /// <response code="200">Книга успешно обновлена</response>
+        /// <response code="400">Редактирование доступно только для прочитанных книг</response>
+        /// <response code="404">Книга не найдена</response>
         [HttpPost("update/{id}")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
         public IActionResult UpdateBook(int id, [FromBody] BookUpdateDTO updateDto)
         {
             try
             {
-                var book = _repository.Book.GetAllBooks(true).FirstOrDefault(b => b.Id == id);
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var book = _repository.Book.GetAllBooks(true)
+                    .FirstOrDefault(b => b.Id == id && b.ListBooks.Any(lb => lb.UserID == userId));
                 if (book == null)
                     return NotFound("Книга не найдена.");
 
-                // Проверка, что книга прочитана (enum используется напрямую)
                 if (updateDto.Status != 1)
-                {
                     return BadRequest("Редактирование доступно только для прочитанных книг.");
-                }
 
-
-                // Обновляем только переданные поля
                 _mapper.Map(updateDto, book);
-                updateDto.AuthorName = updateDto.AuthorName?.Trim();
-               
+
                 if (!string.IsNullOrWhiteSpace(updateDto.AuthorName))
                 {
-                    var author = _repository.Author.GetAuthorByName(updateDto.AuthorName, false);
+                    var author = _repository.Author.GetAuthorByName(updateDto.AuthorName.Trim(), false);
                     if (author == null)
                     {
-                        author = new Author { AuthorName = updateDto.AuthorName };
+                        author = new Author { AuthorName = updateDto.AuthorName.Trim() };
                         _repository.Author.CreateAuthor(author);
                         _repository.Save();
                     }
                     book.AuthorID = author.Id;
                 }
-                updateDto.GenreName = updateDto.GenreName?.Trim();
+
                 if (!string.IsNullOrWhiteSpace(updateDto.GenreName))
                 {
-                    var genre = _repository.Genre.GetGenreByName(updateDto.GenreName, false);
+                    var genre = _repository.Genre.GetGenreByName(updateDto.GenreName.Trim(), false);
                     if (genre == null)
                     {
-                        genre = new Genre { GenreName = updateDto.GenreName };
+                        genre = new Genre { GenreName = updateDto.GenreName.Trim() };
                         _repository.Genre.CreateGenre(genre);
                         _repository.Save();
                     }
                     book.GenreID = genre.Id;
                 }
 
-                // Проверка, есть ли смысл создавать/обновлять ReadingStatus
                 bool hasReadingStatusUpdate =
-    updateDto.Rating.HasValue ||
-    !string.IsNullOrWhiteSpace(updateDto.Review) ||
-    !string.IsNullOrWhiteSpace(updateDto.Quotes) ||
-    updateDto.StartReadingDate.HasValue ||
-    updateDto.EndReadingDate.HasValue ||
-    updateDto.Status.HasValue;
-
+                    updateDto.Rating.HasValue ||
+                    !string.IsNullOrWhiteSpace(updateDto.Review) ||
+                    !string.IsNullOrWhiteSpace(updateDto.Quotes) ||
+                    updateDto.StartReadingDate.HasValue ||
+                    updateDto.EndReadingDate.HasValue ||
+                    updateDto.Status.HasValue;
 
                 if (hasReadingStatusUpdate)
                 {
                     if (book.ReadingStatus == null)
                     {
                         var readingStatus = _mapper.Map<ReadingStatus>(updateDto);
-                        readingStatus.Status = updateDto.Status ?? 1; // устанавливаем статус явно
+                        readingStatus.Status = updateDto.Status ?? 1;
                         _repository.ReadingStatus.CreateReadingStatus(readingStatus);
                         _repository.Save();
 
@@ -173,7 +207,6 @@ namespace Library.Controllers
                     }
                 }
 
-
                 _repository.Save();
 
                 return Ok("Книга успешно обновлена.");
@@ -185,15 +218,24 @@ namespace Library.Controllers
             }
         }
 
-
-
-
+        /// <summary>
+        /// Удаляет книгу из библиотеки пользователя.
+        /// </summary>
+        /// <param name="id">ID книги</param>
+        /// <returns>Результат удаления</returns>
+        /// <response code="200">Книга удалена</response>
+        /// <response code="404">Книга не найдена</response>
         [HttpDelete("{id}")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
         public IActionResult DeleteBook(int id)
         {
             try
             {
-                var book = _repository.Book.GetAllBooks(true).FirstOrDefault(b => b.Id == id);
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var book = _repository.Book.GetAllBooks(true)
+                    .FirstOrDefault(b => b.Id == id && b.ListBooks.Any(lb => lb.UserID == userId));
+
                 if (book == null)
                     return NotFound("Книга не найдена.");
 
@@ -209,46 +251,54 @@ namespace Library.Controllers
             }
         }
 
-
+        /// <summary>
+        /// Импортирует книгу из Google Books API.
+        /// </summary>
+        /// <param name="bookDto">Данные книги</param>
+        /// <returns>Результат импорта</returns>
+        /// <response code="200">Книга успешно импортирована или уже существует</response>
         [HttpPost("import")]
+        [ProducesResponseType(200)]
         public IActionResult ImportBook([FromBody] GoogleBookDTO bookDto)
         {
-            if (bookDto == null)
-                return BadRequest("Некорректные данные книги.");
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            // Поиск или добавление автора
-            var author = _repository.Author.GetAuthorByName(bookDto.Author, false);
+            var author = _repository.Author.GetAuthorByName(bookDto.AuthorName, false);
             if (author == null)
             {
-                author = new Author { AuthorName = bookDto.Author };
+                author = new Author { AuthorName = bookDto.AuthorName };
                 _repository.Author.CreateAuthor(author);
                 _repository.Save();
             }
 
-            // Поиск или добавление жанра
-            var genre = _repository.Genre.GetGenreByName(bookDto.Genre, false);
+            var genre = _repository.Genre.GetGenreByName(bookDto.GenreName, false);
             if (genre == null)
             {
-                genre = new Genre { GenreName = bookDto.Genre };
+                genre = new Genre { GenreName = bookDto.GenreName };
                 _repository.Genre.CreateGenre(genre);
                 _repository.Save();
             }
 
-            // Проверка, есть ли уже такая книга
             var normalizedTitle = bookDto.Title?.Trim().ToLower();
             var existingBook = _repository.Book.GetAllBooks(false)
                 .FirstOrDefault(b => b.Title.ToLower().Trim() == normalizedTitle && b.AuthorID == author.Id);
 
             if (existingBook != null)
-                return Conflict("Такая книга уже есть в библиотеке.");
+            {
+                if (!_repository.ListBook.Exists(userId, existingBook.Id))
+                {
+                    _repository.ListBook.Create(new ListBook { UserID = userId, BookID = existingBook.Id });
+                    _repository.Save();
+                }
+                return Ok(new { Message = "Книга уже существует и добавлена в вашу библиотеку.", existingBook.Id });
+            }
 
-            // Создание новой книги
             var book = new Book
             {
                 Title = bookDto.Title,
                 AuthorID = author.Id,
                 GenreID = genre.Id,
-                Annotation = bookDto.Description,
+                Annotation = bookDto.Annotation,
                 PageCount = bookDto.PageCount,
                 Image = bookDto.Image
             };
@@ -256,31 +306,29 @@ namespace Library.Controllers
             _repository.Book.CreateBook(book);
             _repository.Save();
 
+            _repository.ListBook.Create(new ListBook { UserID = userId, BookID = book.Id });
+            _repository.Save();
+
             return Ok(new { Message = "Книга импортирована и добавлена в библиотеку.", book.Id });
         }
 
-
+        /// <summary>
+        /// Фильтрует книги по заданным параметрам.
+        /// </summary>
+        /// <param name="bookParams">Параметры фильтрации</param>
+        /// <returns>Список отфильтрованных книг</returns>
+        /// <response code="200">Фильтрация прошла успешно</response>
         [HttpGet("filter")]
+        [ProducesResponseType(200)]
         public IActionResult FilterBooks([FromQuery] BookParameters bookParams)
         {
-            var books = _repository.Book.GetFilteredBooks(bookParams, trackChanges: false);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var books = _repository.Book.GetFilteredBooks(bookParams, false)
+                .Where(b => b.ListBooks.Any(lb => lb.UserID == userId));
             var booksDto = _mapper.Map<IEnumerable<BookListDTO>>(books);
 
-            // Получаем метаданные и сериализуем
-            var paginationMetaData = new
-            {
-                books.PageNumber,
-                books.PageSize,
-                books.TotalItemCount,
-                books.PageCount,
-                books.HasNextPage,
-                books.HasPreviousPage
-            };
             return Ok(booksDto);
         }
-
-
-
     }
 }
-   

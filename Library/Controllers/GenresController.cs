@@ -6,10 +6,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Library.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/genres")]
     [ApiController]
     [Authorize]
     public class GenresController : ControllerBase
@@ -23,16 +24,28 @@ namespace Library.Controllers
             _logger = logger;
             _mapper = mapper;
         }
+
+        /// <summary>
+        /// Создаёт новый жанр книги.
+        /// </summary>
+        /// <param name="genreDto">Данные жанра</param>
+        /// <returns>Информация о созданном жанре</returns>
+        /// <response code="200">Жанр успешно создан</response>
+        /// <response code="400">Название жанра не указано</response>
+        /// <response code="409">Такой жанр уже существует</response>
         [HttpPost]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(409)]
         public IActionResult CreateGenre([FromBody] GenreDTO genreDto)
         {
             if (string.IsNullOrWhiteSpace(genreDto.GenreName))
                 return BadRequest("Название жанра не может быть пустым.");
 
-            var normalizedGenreName = NormalizeName(genreDto.GenreName);
+            var normalizedGenreName = genreDto.GenreName.Trim(); 
 
             var existing = _repository.Genre
-                .FindByCondition(g => g.GenreName.ToLower().Trim() == normalizedGenreName.ToLower().Trim(), false)
+                .FindByCondition(g => g.GenreName.Trim() == normalizedGenreName, false)
                 .FirstOrDefault();
 
             if (existing != null)
@@ -51,16 +64,6 @@ namespace Library.Controllers
                 return Conflict("Жанр уже существует (ограничение уникальности сработало)");
             }
         }
-
-        private string NormalizeName(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return input;
-            input = input.Trim().ToLower();
-            return char.ToUpper(input[0]) + input.Substring(1);
-        }
     }
-
-
-
 }
 

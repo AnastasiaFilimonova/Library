@@ -31,6 +31,7 @@ namespace Repository
                 .Include(b => b.Author)
                 .Include(b => b.Genre)
                 .Include(b => b.ReadingStatus)
+                .Include(b => b.ListBooks)
                 .ToList();
 
         public IPagedList<Book> GetFilteredBooks(BookParameters parameters, bool trackChanges)

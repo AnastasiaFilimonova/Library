@@ -6,10 +6,11 @@ using Library.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Library.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/wishlist")]
     [ApiController]
     [Authorize]
     public class WishlistController : ControllerBase
@@ -25,12 +26,22 @@ namespace Library.Controllers
             _mapper = mapper;
         }
 
+        /// <summary>
+        /// Получает список книг из списка желаний пользователя
+        /// </summary>
+        /// <returns>Список желаемых книг</returns>
+        /// <response code="200">Успешно возвращает список</response>
+        /// <response code="500">Ошибка сервера</response>
         [HttpGet]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
         public IActionResult GetWishlist()
         {
             try
             {
-                var wishlist = _repository.Wishlist.GetAllWishlistItems(false);
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                var wishlist = _repository.Wishlist.GetAllWishlistItems(false).Where(w => w.UserID == userId);
                 var wishlistDto = _mapper.Map<IEnumerable<WishlistDTO>>(wishlist);
                 return Ok(wishlistDto);
             }
@@ -41,45 +52,45 @@ namespace Library.Controllers
             }
         }
 
+        /// <summary>
+        /// Добавляет книгу в список желаний пользователя
+        /// </summary>
+        /// <param name="dto">Информация о книге (название, автор, жанр)</param>
+        /// <returns>Сообщение об успешном добавлении</returns>
+        /// <response code="200">Книга успешно добавлена</response>
+        /// <response code="500">Ошибка сервера</response>
         [HttpPost]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
         public IActionResult AddToWishlist([FromBody] NewWishlistDTO dto)
         {
             try
             {
-                var author = _repository.Author.GetAuthorByName(dto.AuthorName.Trim(), false)
-                              ?? new Author { AuthorName = dto.AuthorName.Trim() };
-
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var author = _repository.Author.GetAuthorByName(dto.AuthorName.Trim(), false) ?? new Author { AuthorName = dto.AuthorName.Trim() };
                 if (author.Id == 0)
                 {
                     _repository.Author.CreateAuthor(author);
                     _repository.Save();
                 }
-
-                var genre = _repository.Genre.GetGenreByName(dto.GenreName.Trim(), false)
-                              ?? new Genre { GenreName = dto.GenreName.Trim() };
-
+                var genre = _repository.Genre.GetGenreByName(dto.GenreName.Trim(), false) ?? new Genre { GenreName = dto.GenreName.Trim() };
                 if (genre.Id == 0)
                 {
                     _repository.Genre.CreateGenre(genre);
                     _repository.Save();
                 }
-
                 var book = _mapper.Map<Book>(dto);
                 book.AuthorID = author.Id;
                 book.GenreID = genre.Id;
-
                 _repository.Book.CreateBook(book);
                 _repository.Save();
-
                 var wishlistItem = new Wishlist
                 {
                     BookID = book.Id,
-                    UserID = 1 // если у тебя пока нет авторизации
+                    UserID = userId
                 };
-
                 _repository.Wishlist.AddToWishlist(wishlistItem);
                 _repository.Save();
-
                 return Ok(new { Message = "Книга добавлена в список желаний." });
             }
             catch (Exception ex)
@@ -89,14 +100,24 @@ namespace Library.Controllers
             }
         }
 
-
-
+        /// <summary>
+        /// Удаляет книгу из списка желаний пользователя
+        /// </summary>
+        /// <param name="id">ID книги</param>
+        /// <returns>Сообщение об успешном удалении</returns>
+        /// <response code="200">Книга удалена</response>
+        /// <response code="404">Книга не найдена</response>
+        /// <response code="500">Ошибка сервера</response>
         [HttpDelete("{id}")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(500)]
         public IActionResult RemoveFromWishlist(int id)
         {
             try
             {
-                var item = _repository.Wishlist.GetWishlistItem(id, false);
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var item = _repository.Wishlist.GetAllWishlistItems(true).FirstOrDefault(w => w.BookID == id && w.UserID == userId);
                 if (item == null)
                     return NotFound("Книга не найдена в списке желаний.");
 
@@ -111,32 +132,54 @@ namespace Library.Controllers
             }
         }
 
+        /// <summary>
+        /// Перемещает книгу из списка желаний в библиотеку (как не прочитанную)
+        /// </summary>
+        /// <param name="id">ID книги</param>
+        /// <returns>Сообщение об успешной покупке</returns>
+        /// <response code="200">Книга добавлена в библиотеку</response>
+        /// <response code="404">Книга не найдена в списке желаний</response>
+        /// <response code="500">Ошибка сервера</response>
         [HttpPost("purchase/{id}")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(500)]
         public IActionResult PurchaseBook(int id)
         {
             try
             {
-                var item = _repository.Wishlist.GetWishlistItem(id, true);
-                if (item == null)
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                var item = _repository.Wishlist.GetAllWishlistItems(true).FirstOrDefault(w => w.BookID == id && w.UserID == userId);
+
+                if (item == null || item.Book == null)
                     return NotFound("Книга не найдена в списке желаний.");
 
                 var book = item.Book;
-
-                var readingStatus = new ReadingStatus
+                if (book.ReadingStatus == null)
                 {
-                    Status = (int)ReadingStatusEnum.NotRead
-                };
+                    var readingStatus = new ReadingStatus
+                    {
+                        Status = (int)ReadingStatusEnum.NotRead
+                    };
 
-                _repository.ReadingStatus.CreateReadingStatus(readingStatus);
-                _repository.Save();
+                    _repository.ReadingStatus.CreateReadingStatus(readingStatus);
+                    _repository.Save();
 
-                book.ReadingStatusID = readingStatus.Id;
-                book.ReadingStatus = readingStatus;
+                    book.ReadingStatusID = readingStatus.Id;
+                    book.ReadingStatus = readingStatus;
+                }
                 _repository.Book.UpdateBook(book);
-
                 _repository.Wishlist.RemoveFromWishlist(item);
+                if (!_repository.ListBook.Exists(userId, book.Id))
+                {
+                    _repository.ListBook.Create(new ListBook
+                    {
+                        UserID = userId,
+                        BookID = book.Id
+                    });
+                }
                 _repository.Save();
-
                 return Ok("Книга куплена и добавлена в библиотеку.");
             }
             catch (Exception ex)

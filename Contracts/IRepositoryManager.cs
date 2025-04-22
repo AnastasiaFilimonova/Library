@@ -13,6 +13,7 @@ namespace Contracts
         IGenreRepository Genre { get; }
         IReadingStatusRepository ReadingStatus { get; }
         IWishlistRepository Wishlist { get; }
+        IListBookRepository ListBook { get; }
         void Save();
     }
 }
