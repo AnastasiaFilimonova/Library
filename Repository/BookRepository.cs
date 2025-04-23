@@ -22,25 +22,13 @@ namespace Repository
         : base(repositoryContext)
         {
         }
-
         public void CreateBook(Book book) => Create(book);
         public void DeleteBook(Book book) => Delete(book);
         public void UpdateBook(Book book) => Update(book);
-        public IEnumerable<Book> GetAllBooks(bool trackChanges) =>
-            RepositoryContext.Books
-                .Include(b => b.Author)
-                .Include(b => b.Genre)
-                .Include(b => b.ReadingStatus)
-                .Include(b => b.ListBooks)
-                .ToList();
-
+        public IEnumerable<Book> GetAllBooks(bool trackChanges) => RepositoryContext.Books.Include(b => b.Author).Include(b => b.Genre).Include(b => b.ReadingStatus).Include(b => b.ListBooks).ToList();
         public IPagedList<Book> GetFilteredBooks(BookParameters parameters, bool trackChanges)
         {
-            var books = FindAll(trackChanges)
-                .Include(b => b.Author)
-                .Include(b => b.Genre)
-                .Include(b => b.ReadingStatus)
-                .AsEnumerable()
+            var books = FindAll(trackChanges).Include(b => b.Author).Include(b => b.Genre).Include(b => b.ReadingStatus).AsEnumerable()
                 .Where(b =>
                     (string.IsNullOrEmpty(parameters.AuthorName) || b.Author.AuthorName.ToLowerInvariant().Contains(parameters.AuthorName.ToLowerInvariant())) &&
                     (string.IsNullOrEmpty(parameters.GenreName) || b.Genre.GenreName.ToLowerInvariant().Contains(parameters.GenreName.ToLowerInvariant())) &&
@@ -49,12 +37,7 @@ namespace Repository
                     (!parameters.Status.HasValue || b.ReadingStatus?.Status == parameters.Status)
                 )
                 .ToList();
-
             return books.ToPagedList();
         }
-
-
-
-
     }
 }

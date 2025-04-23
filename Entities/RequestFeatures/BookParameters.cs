@@ -10,8 +10,8 @@ namespace Entities.RequestFeatures
     {
         public string? AuthorName { get; set; }
         public string? GenreName { get; set; }
-        public int? Year { get; set; } // Год окончания чтения
+        public int? Year { get; set; } 
         public int? Rating { get; set; }
-        public int? Status { get; set; } // 1 = прочитана, 0 = не прочитана
+        public int? Status { get; set; } 
     }
 }

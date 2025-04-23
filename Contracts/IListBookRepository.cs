@@ -11,6 +11,5 @@ namespace Contracts
     {
         bool Exists(int userId, int bookId);
         void Create(ListBook listBook);
-
     }
 }

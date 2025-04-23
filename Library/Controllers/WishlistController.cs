@@ -18,14 +18,12 @@ namespace Library.Controllers
         private readonly IRepositoryManager _repository;
         private readonly ILoggerManager _logger;
         private readonly IMapper _mapper;
-
         public WishlistController(IRepositoryManager repository, ILoggerManager logger, IMapper mapper)
         {
             _repository = repository;
             _logger = logger;
             _mapper = mapper;
         }
-
         /// <summary>
         /// Получает список книг из списка желаний пользователя
         /// </summary>
@@ -40,7 +38,6 @@ namespace Library.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
                 var wishlist = _repository.Wishlist.GetAllWishlistItems(false).Where(w => w.UserID == userId);
                 var wishlistDto = _mapper.Map<IEnumerable<WishlistDTO>>(wishlist);
                 return Ok(wishlistDto);
@@ -51,7 +48,6 @@ namespace Library.Controllers
                 return StatusCode(500, "Внутренняя ошибка сервера");
             }
         }
-
         /// <summary>
         /// Добавляет книгу в список желаний пользователя
         /// </summary>
@@ -99,7 +95,6 @@ namespace Library.Controllers
                 return StatusCode(500, "Внутренняя ошибка сервера");
             }
         }
-
         /// <summary>
         /// Удаляет книгу из списка желаний пользователя
         /// </summary>
@@ -120,7 +115,6 @@ namespace Library.Controllers
                 var item = _repository.Wishlist.GetAllWishlistItems(true).FirstOrDefault(w => w.BookID == id && w.UserID == userId);
                 if (item == null)
                     return NotFound("Книга не найдена в списке желаний.");
-
                 _repository.Wishlist.RemoveFromWishlist(item);
                 _repository.Save();
                 return Ok("Книга удалена из списка желаний.");
@@ -131,9 +125,8 @@ namespace Library.Controllers
                 return StatusCode(500, "Внутренняя ошибка сервера");
             }
         }
-
         /// <summary>
-        /// Перемещает книгу из списка желаний в библиотеку (как не прочитанную)
+        /// Перемещает книгу из списка желаний в библиотеку 
         /// </summary>
         /// <param name="id">ID книги</param>
         /// <returns>Сообщение об успешной покупке</returns>
@@ -149,12 +142,9 @@ namespace Library.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
                 var item = _repository.Wishlist.GetAllWishlistItems(true).FirstOrDefault(w => w.BookID == id && w.UserID == userId);
-
                 if (item == null || item.Book == null)
                     return NotFound("Книга не найдена в списке желаний.");
-
                 var book = item.Book;
                 if (book.ReadingStatus == null)
                 {
@@ -162,10 +152,8 @@ namespace Library.Controllers
                     {
                         Status = (int)ReadingStatusEnum.NotRead
                     };
-
                     _repository.ReadingStatus.CreateReadingStatus(readingStatus);
                     _repository.Save();
-
                     book.ReadingStatusID = readingStatus.Id;
                     book.ReadingStatus = readingStatus;
                 }

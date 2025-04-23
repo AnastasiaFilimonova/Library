@@ -14,15 +14,13 @@ namespace Library.Controllers
     {
         private readonly IConfiguration _config;
         private readonly IHttpClientFactory _httpClientFactory;
-
         public GoogleBooksController(IConfiguration config, IHttpClientFactory httpClientFactory)
         {
             _config = config;
             _httpClientFactory = httpClientFactory;
         }
-
         /// <summary>
-        /// Выполняет поиск книг через Google Books API по ключевому слову.
+        /// Выполняет поиск книг через Google Books API 
         /// </summary>
         /// <param name="query">Ключевое слово для поиска</param>
         /// <returns>Список книг, найденных в Google Books</returns>
@@ -37,22 +35,17 @@ namespace Library.Controllers
         {
             if (string.IsNullOrWhiteSpace(query))
                 return BadRequest("Введите поисковый запрос");
-
             var apiKey = _config["GoogleBooks:ApiKey"];
             var url = $"https://www.googleapis.com/books/v1/volumes?q={query}&key={apiKey}";
-
             var client = _httpClientFactory.CreateClient();
             var response = await client.GetAsync(url);
-
             if (!response.IsSuccessStatusCode)
                 return StatusCode((int)response.StatusCode, "Ошибка при запросе к Google Books API");
-
             var json = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<GoogleBooksResponse>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
-
             var books = result?.Items?.Select(item => new GoogleBookDTO
             {
                 Title = item.VolumeInfo?.Title,
@@ -62,7 +55,6 @@ namespace Library.Controllers
                 PageCount = item.VolumeInfo?.PageCount ?? 0,
                 Image = item.VolumeInfo?.ImageLinks?.Thumbnail
             }).ToList();
-
             return Ok(books);
         }
     }

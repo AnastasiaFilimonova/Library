@@ -24,9 +24,8 @@ namespace Library.Controllers
             _logger = logger;
             _mapper = mapper;
         }
-
         /// <summary>
-        /// Создаёт новый жанр книги.
+        /// Создаёт новый жанр книги
         /// </summary>
         /// <param name="genreDto">Данные жанра</param>
         /// <returns>Информация о созданном жанре</returns>
@@ -41,22 +40,15 @@ namespace Library.Controllers
         {
             if (string.IsNullOrWhiteSpace(genreDto.GenreName))
                 return BadRequest("Название жанра не может быть пустым.");
-
             var normalizedGenreName = genreDto.GenreName.Trim(); 
-
-            var existing = _repository.Genre
-                .FindByCondition(g => g.GenreName.Trim() == normalizedGenreName, false)
-                .FirstOrDefault();
-
+            var existing = _repository.Genre.FindByCondition(g => g.GenreName.Trim() == normalizedGenreName, false).FirstOrDefault();
             if (existing != null)
                 return Conflict("Жанр уже существует");
-
             try
             {
                 var genre = new Genre { GenreName = normalizedGenreName };
                 _repository.Genre.CreateGenre(genre);
                 _repository.Save();
-
                 return Ok(genre);
             }
             catch (DbUpdateException)

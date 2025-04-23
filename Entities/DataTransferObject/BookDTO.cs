@@ -12,7 +12,6 @@ namespace Entities.DataTransferObject
         public string AuthorName { get; set; } 
         public string GenreName { get; set; }
         public string Image { get; set; }
-
         public int PageCount { get; set; }
         public string Annotation { get; set; }
     }

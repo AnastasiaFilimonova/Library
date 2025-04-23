@@ -21,50 +21,32 @@ namespace Repository
         public Author GetAuthorByName(string name, bool trackChanges)
         {
             if (string.IsNullOrWhiteSpace(name)) return null;
-
-            var normalized = NormalizeName(name); // нормализуем заранее
-            return FindByCondition(a => a.AuthorName == normalized, trackChanges)
-                .FirstOrDefault();
+            var normalized = NormalizeName(name); 
+            return FindByCondition(a => a.AuthorName == normalized, trackChanges).FirstOrDefault();
         }
-
-
-
-
         public void CreateAuthor(Author author)
         {
             author.AuthorName = NormalizeName(author.AuthorName);
             Create(author);
         }
-
         public Author GetOrCreateAuthor(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
                 return null;
-
             var normalized = name.Trim().ToLower();
-
-            var author = FindByCondition(a => a.AuthorName.ToLower().Trim() == normalized, false)
-                .FirstOrDefault();
-
+            var author = FindByCondition(a => a.AuthorName.ToLower().Trim() == normalized, false).FirstOrDefault();
             if (author != null)
                 return author;
-
-            // Создаём, если не найден
             var newAuthor = new Author { AuthorName = NormalizeName(name) };
             Create(newAuthor);
-            RepositoryContext.SaveChanges(); // << ВАЖНО!
-
+            RepositoryContext.SaveChanges(); 
             return newAuthor;
         }
-
         private string NormalizeName(string input)
         {
             if (string.IsNullOrWhiteSpace(input)) return input;
             input = input.Trim().ToLower();
             return char.ToUpper(input[0]) + input.Substring(1);
         }
-
-        //public IQueryable<Author> FindByCondition(Expression<Func<Author, bool>> expression, bool trackChanges) =>
-        //    base.FindByCondition(expression, trackChanges);
     }
 }

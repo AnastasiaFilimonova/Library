@@ -14,7 +14,5 @@ namespace Contracts
         void CreateGenre(Genre genre);
         IQueryable<Genre> FindByCondition(Expression<Func<Genre, bool>> expression, bool trackChanges);
         Genre GetOrCreateGenre(string name);
-
     }
-
 }

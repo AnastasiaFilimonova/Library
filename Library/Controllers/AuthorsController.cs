@@ -26,7 +26,7 @@ namespace Library.Controllers
         }
 
         /// <summary>
-        /// Создаёт нового автора.
+        /// Создаёт нового автора
         /// </summary>
         /// <param name="authorDto">Данные автора.</param>
         /// <returns>Информация о созданном авторе.</returns>
@@ -44,23 +44,18 @@ namespace Library.Controllers
 
             var normalized = authorDto.AuthorName.Trim();
 
-            var existing = _repository.Author
-                .FindByCondition(a => a.AuthorName.ToLower().Trim() == normalized, false)
-                .FirstOrDefault();
+            var existing = _repository.Author.FindByCondition(a => a.AuthorName.ToLower().Trim() == normalized, false).FirstOrDefault();
 
             if (existing != null)
                 return Conflict("Автор уже существует");
-
             try
             {
                 var author = new Author
                 {
                     AuthorName = char.ToUpper(normalized[0]) + normalized.Substring(1)
                 };
-
                 _repository.Author.CreateAuthor(author);
                 _repository.Save();
-
                 return Ok(author);
             }
             catch (DbUpdateException)

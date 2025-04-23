@@ -16,16 +16,13 @@ namespace Repository
             : base(repositoryContext)
         {
         }
-
         public bool Exists(int userId, int bookId)
         {
             return RepositoryContext.ListBooks.Any(lb => lb.UserID == userId && lb.BookID == bookId);
         }
-
         public void Create(ListBook listBook)
         {
             RepositoryContext.ListBooks.Add(listBook);
         }
-
     }
 }

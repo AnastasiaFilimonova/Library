@@ -28,7 +28,7 @@ namespace Library.Controllers
         }
 
         /// <summary>
-        /// Регистрирует нового пользователя в системе.
+        /// Регистрирует нового пользователя в системе
         /// </summary>
         /// <param name="userDto">Данные пользователя для регистрации.</param>
         /// <returns>JWT-токен при успешной регистрации.</returns>
@@ -51,16 +51,13 @@ namespace Library.Controllers
                 Password = BCrypt.Net.BCrypt.HashPassword(userDto.Password),
                 UserName = userDto.UserName 
             };
-
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-
             var token = _jwtService.GenerateToken(user.Id, user.Login);
             return Ok(new { token });
         }
-
         /// <summary>
-        /// Выполняет вход пользователя в систему.
+        /// Выполняет вход пользователя в систему
         /// </summary>
         /// <param name="loginDto">Данные пользователя для входа.</param>
         /// <returns>JWT-токен при успешной авторизации.</returns>
@@ -77,7 +74,6 @@ namespace Library.Controllers
             {
                 return Unauthorized(new { message = "Неверный логин или пароль." });
             }
-
             var token = _jwtService.GenerateToken(user.Id, user.Login);
             return Ok(new { token });
         }

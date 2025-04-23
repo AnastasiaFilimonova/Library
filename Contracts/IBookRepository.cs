@@ -20,8 +20,6 @@ namespace Contracts
         void DeleteBook(Book book);
         void UpdateBook(Book book);
         IPagedList<Book> GetFilteredBooks(BookParameters bookParams, bool trackChanges);
-
-
     }
 }
 

@@ -15,13 +15,8 @@ namespace Repository
             : base(repositoryContext)
         {
         }
-
-        public IEnumerable<ReadingStatus> GetAllStatuses(bool trackChanges) =>
-            FindAll(trackChanges).ToList();
-
-        public ReadingStatus GetStatusById(int id, bool trackChanges) =>
-            FindByCondition(rs => rs.Id == id, trackChanges).FirstOrDefault();
-
+        public IEnumerable<ReadingStatus> GetAllStatuses(bool trackChanges) => FindAll(trackChanges).ToList();
+        public ReadingStatus GetStatusById(int id, bool trackChanges) => FindByCondition(rs => rs.Id == id, trackChanges).FirstOrDefault();
         public void Update(ReadingStatus status) => base.Update(status);
         public void CreateReadingStatus(ReadingStatus status) => Create(status);
     }

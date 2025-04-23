@@ -16,9 +16,7 @@ namespace Repository
         private readonly IGenreRepository _genreRepository;
         private IReadingStatusRepository _readingStatusRepository;
         private IListBookRepository _listBook;
-
         public IListBookRepository ListBook => _listBook ??= new ListBookRepository(_repositoryContext);
-
         public RepositoryManager(RepositoryContext repositoryContext)
         {
             _repositoryContext = repositoryContext;
@@ -39,10 +37,8 @@ namespace Repository
         public IAuthorRepository Author => _authorRepository;
         public IGenreRepository Genre => _genreRepository;
         public IReadingStatusRepository ReadingStatus => _readingStatusRepository ??= new ReadingStatusRepository(_repositoryContext);
-
         public IWishlistRepository Wishlist => _wishlist ??= new WishlistRepository(_repositoryContext);
         private IWishlistRepository _wishlist;
-
         public void Save() => _repositoryContext.SaveChanges();
     }
 }

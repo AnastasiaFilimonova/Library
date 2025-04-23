@@ -14,20 +14,9 @@ namespace Repository
     {
         public WishlistRepository(RepositoryContext context) : base(context) { }
 
-        public IEnumerable<Wishlist> GetAllWishlistItems(bool trackChanges) =>
-            FindAll(trackChanges).Include(w => w.Book).ThenInclude(b => b.Author)
-                                 .Include(w => w.Book.Genre)
-                                 .ToList();
-
-        public Wishlist GetWishlistItem(int bookId, bool trackChanges) =>
-            FindByCondition(w => w.BookID == bookId, trackChanges)
-            .Include(w => w.Book)
-            .ThenInclude(b => b.Author)
-            .Include(w => w.Book.Genre)
-            .FirstOrDefault();
-
+        public IEnumerable<Wishlist> GetAllWishlistItems(bool trackChanges) => FindAll(trackChanges).Include(w => w.Book).ThenInclude(b => b.Author).Include(w => w.Book.Genre).ToList();
+        public Wishlist GetWishlistItem(int bookId, bool trackChanges) => FindByCondition(w => w.BookID == bookId, trackChanges).Include(w => w.Book).ThenInclude(b => b.Author).Include(w => w.Book.Genre).FirstOrDefault();
         public void AddToWishlist(Wishlist item) => Create(item);
-
         public void RemoveFromWishlist(Wishlist item) => Delete(item);
     }
 }

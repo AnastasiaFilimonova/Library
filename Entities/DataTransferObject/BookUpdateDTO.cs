@@ -15,18 +15,11 @@ namespace Entities.DataTransferObject
         public string? Image { get; set; }
         public int? PageCount { get; set; }
         public string? Annotation { get; set; }
-
         public int? Status { get; set; }
-
-
-
-
         public int? Rating { get; set; }
         public string? Review { get; set; }
         public string? Quotes { get; set; }
         public DateTime? StartReadingDate { get; set; }
         public DateTime? EndReadingDate { get; set; }
     }
-
-
 }
