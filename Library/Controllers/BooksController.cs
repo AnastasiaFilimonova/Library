@@ -29,14 +29,14 @@ namespace Library.Controllers
             _mapper = mapper;
         }
         /// <summary>
-        /// Получает список всех книг пользователя
+        /// Возвращает список всех книг пользователя
         /// </summary>
         /// <returns>Список книг</returns>
         /// <response code="200">Успешно возвращён список книг</response>
-        /// <response code="500">Внутренняя ошибка сервера</response>
+        /// <response code="400">Ошибка при получении данных</response>
         [HttpGet]
         [ProducesResponseType(200)]
-        [ProducesResponseType(500)]
+        [ProducesResponseType(400)]
         public IActionResult GetBooks()
         {
             try
@@ -49,12 +49,12 @@ namespace Library.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Ошибка в GetBooks: {ex}");
-                return StatusCode(500, "Внутренняя ошибка сервера");
+                return BadRequest("Ошибка при получении списка книг");
             }
         }
 
         /// <summary>
-        /// Получает подробную информацию о книге по ID
+        /// Возвращает подробную информацию о книге по ID
         /// </summary>
         /// <param name="id">ID книги</param>
         /// <returns>Детали книги</returns>
@@ -73,7 +73,7 @@ namespace Library.Controllers
         }
 
         /// <summary>
-        /// Добавляет книгу в библиотеку пользователя
+        /// Добавление книги в библиотеку пользователя
         /// </summary>
         /// <param name="bookDTO">Данные книги</param>
         /// <returns>Результат добавления</returns>
@@ -114,7 +114,7 @@ namespace Library.Controllers
         }
 
         /// <summary>
-        /// Обновляет информацию о прочитанной книге
+        /// Обновление информации о прочитанной книге
         /// </summary>
         /// <param name="id">ID книги</param>
         /// <param name="updateDto">Новые данные</param>
@@ -185,18 +185,20 @@ namespace Library.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Ошибка при обновлении книги: {ex}");
-                return StatusCode(500, "Внутренняя ошибка сервера");
+                return BadRequest();
             }
         }
         /// <summary>
-        /// Удаляет книгу из библиотеки пользователя
+        /// Удаление книги из библиотеки пользователя
         /// </summary>
         /// <param name="id">ID книги</param>
         /// <returns>Результат удаления</returns>
         /// <response code="200">Книга удалена</response>
+        /// <response code="400">Книга удалена</response>
         /// <response code="404">Книга не найдена</response>
         [HttpDelete("{id}")]
         [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public IActionResult DeleteBook(int id)
         {
@@ -213,11 +215,11 @@ namespace Library.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Ошибка при удалении книги: {ex}");
-                return StatusCode(500, "Ошибка сервера");
+                return BadRequest("Ошибка при удалении книги");
             }
         }
         /// <summary>
-        /// Импортирует книгу из Google Books API
+        /// Импорт книги из Google Books API
         /// </summary>
         /// <param name="bookDto">Данные книги</param>
         /// <returns>Результат импорта</returns>
@@ -270,7 +272,7 @@ namespace Library.Controllers
         }
 
         /// <summary>
-        /// Фильтрует книги по заданным параметрам
+        /// Фильтрация книги по заданным параметрам
         /// </summary>
         /// <param name="bookParams">Параметры фильтрации</param>
         /// <returns>Список отфильтрованных книг</returns>

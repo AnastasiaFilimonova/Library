@@ -44,7 +44,10 @@ namespace Library.Controllers
             {
                 return BadRequest(new { message = "Пользователь с таким логином уже существует." });
             }
-
+            if (string.IsNullOrWhiteSpace(userDto.Password) || userDto.Password.Length < 6)
+            {
+                return BadRequest(new { message = "Пароль должен содержать минимум 6 символов." });
+            }
             var user = new User
             {
                 Login = userDto.Login,

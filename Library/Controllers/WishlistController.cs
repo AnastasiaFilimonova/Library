@@ -25,14 +25,12 @@ namespace Library.Controllers
             _mapper = mapper;
         }
         /// <summary>
-        /// Получает список книг из списка желаний пользователя
+        /// Возвращает список книг из списка желаний пользователя
         /// </summary>
         /// <returns>Список желаемых книг</returns>
         /// <response code="200">Успешно возвращает список</response>
-        /// <response code="500">Ошибка сервера</response>
         [HttpGet]
         [ProducesResponseType(200)]
-        [ProducesResponseType(500)]
         public IActionResult GetWishlist()
         {
             try
@@ -49,15 +47,15 @@ namespace Library.Controllers
             }
         }
         /// <summary>
-        /// Добавляет книгу в список желаний пользователя
+        /// Добавление книгу в список желаний пользователя
         /// </summary>
         /// <param name="dto">Информация о книге (название, автор, жанр)</param>
         /// <returns>Сообщение об успешном добавлении</returns>
         /// <response code="200">Книга успешно добавлена</response>
-        /// <response code="500">Ошибка сервера</response>
+        /// <response code="400">Ошибка при добавлении книги</response>
         [HttpPost]
         [ProducesResponseType(200)]
-        [ProducesResponseType(500)]
+        [ProducesResponseType(400)]
         public IActionResult AddToWishlist([FromBody] NewWishlistDTO dto)
         {
             try
@@ -92,21 +90,21 @@ namespace Library.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Ошибка в AddToWishlist: {ex}");
-                return StatusCode(500, "Внутренняя ошибка сервера");
+                return BadRequest("Ошибка при добавлении книги в список желаний");
             }
         }
         /// <summary>
-        /// Удаляет книгу из списка желаний пользователя
+        /// Удаление книги из списка желаний пользователя
         /// </summary>
         /// <param name="id">ID книги</param>
         /// <returns>Сообщение об успешном удалении</returns>
         /// <response code="200">Книга удалена</response>
+        /// <response code="400">Ошибка при удалении книги</response>
         /// <response code="404">Книга не найдена</response>
-        /// <response code="500">Ошибка сервера</response>
         [HttpDelete("{id}")]
         [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        [ProducesResponseType(500)]
         public IActionResult RemoveFromWishlist(int id)
         {
             try
@@ -122,21 +120,21 @@ namespace Library.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Ошибка в RemoveFromWishlist: {ex}");
-                return StatusCode(500, "Внутренняя ошибка сервера");
+                return BadRequest("Ошибка при удалении книги");
             }
         }
         /// <summary>
-        /// Перемещает книгу из списка желаний в библиотеку 
+        /// Перемещение книги из списка желаний в библиотеку 
         /// </summary>
         /// <param name="id">ID книги</param>
         /// <returns>Сообщение об успешной покупке</returns>
         /// <response code="200">Книга добавлена в библиотеку</response>
+        /// <response code="400">Ошибка при получении данных</response>
         /// <response code="404">Книга не найдена в списке желаний</response>
-        /// <response code="500">Ошибка сервера</response>
         [HttpPost("purchase/{id}")]
         [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        [ProducesResponseType(500)]
         public IActionResult PurchaseBook(int id)
         {
             try
@@ -173,7 +171,7 @@ namespace Library.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Ошибка в PurchaseBook: {ex}");
-                return StatusCode(500, "Внутренняя ошибка сервера");
+                return BadRequest("Ошибка при перемещении книги в библиотеку");
             }
         }
     }
