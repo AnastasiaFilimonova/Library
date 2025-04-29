@@ -3,7 +3,9 @@ using Contracts;
 using Entities;
 using Entities.DataTransferObject;
 using Library.Models;
+using Library.utils;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NLog.Config;
@@ -39,20 +41,21 @@ namespace Library.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Register([FromBody] RegisterDTO userDto)
         {
+            var (isValid, errors) = InputValidator.ValidateRegister(userDto.Login, userDto.Password);
+            if (!isValid)
+            {
+                return BadRequest(new { errors });
+            }
             var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Login == userDto.Login);
             if (existingUser != null)
             {
                 return BadRequest(new { message = "Пользователь с таким логином уже существует." });
             }
-            if (string.IsNullOrWhiteSpace(userDto.Password) || userDto.Password.Length < 6)
-            {
-                return BadRequest(new { message = "Пароль должен содержать минимум 6 символов." });
-            }
             var user = new User
             {
                 Login = userDto.Login,
                 Password = BCrypt.Net.BCrypt.HashPassword(userDto.Password),
-                UserName = userDto.UserName 
+                UserName = userDto.UserName
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
