@@ -25,7 +25,7 @@ namespace Library.Controllers
             _mapper = mapper;
         }
         /// <summary>
-        /// Создаёт новый жанр книги
+        /// Создание новый жанр книги
         /// </summary>
         /// <param name="genreDto">Данные жанра</param>
         /// <returns>Информация о созданном жанре</returns>

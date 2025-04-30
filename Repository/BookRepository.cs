@@ -28,7 +28,7 @@ namespace Repository
         public IEnumerable<Book> GetAllBooks(bool trackChanges) => RepositoryContext.Books.Include(b => b.Author).Include(b => b.Genre).Include(b => b.ReadingStatus).Include(b => b.ListBooks).ToList();
         public IPagedList<Book> GetFilteredBooks(BookParameters parameters, bool trackChanges)
         {
-            var books = FindAll(trackChanges).Include(b => b.Author).Include(b => b.Genre).Include(b => b.ReadingStatus).AsEnumerable()
+            var books = FindAll(trackChanges).Include(b => b.Author).Include(b => b.Genre).Include(b => b.ReadingStatus).Include(b => b.ListBooks).AsEnumerable()
                 .Where(b =>
                     (string.IsNullOrEmpty(parameters.AuthorName) || b.Author.AuthorName.ToLowerInvariant().Contains(parameters.AuthorName.ToLowerInvariant())) &&
                     (string.IsNullOrEmpty(parameters.GenreName) || b.Genre.GenreName.ToLowerInvariant().Contains(parameters.GenreName.ToLowerInvariant())) &&

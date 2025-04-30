@@ -61,17 +61,25 @@ namespace Library.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var author = _repository.Author.GetAuthorByName(dto.AuthorName.Trim(), false) ?? new Author { AuthorName = dto.AuthorName.Trim() };
+                var authorName = dto.AuthorName.Trim();
+                var genreName = dto.GenreName.Trim();
+                var title = dto.Title.Trim();
+                var author = _repository.Author.GetAuthorByName(authorName, false) ?? new Author { AuthorName = authorName };
                 if (author.Id == 0)
                 {
                     _repository.Author.CreateAuthor(author);
                     _repository.Save();
                 }
-                var genre = _repository.Genre.GetGenreByName(dto.GenreName.Trim(), false) ?? new Genre { GenreName = dto.GenreName.Trim() };
+                var genre = _repository.Genre.GetGenreByName(genreName, false) ?? new Genre { GenreName = genreName };
                 if (genre.Id == 0)
                 {
                     _repository.Genre.CreateGenre(genre);
                     _repository.Save();
+                }
+                var existingWishlistItem = _repository.Wishlist.GetAllWishlistItems(true).FirstOrDefault(w => w.UserID == userId && w.Book.Title.Trim().ToLower() == title.ToLower() && w.Book.AuthorID == author.Id);
+                if (existingWishlistItem != null)
+                {
+                    return BadRequest("Такая книга уже есть в вашем списке желаний.");
                 }
                 var book = _mapper.Map<Book>(dto);
                 book.AuthorID = author.Id;
@@ -93,6 +101,7 @@ namespace Library.Controllers
                 return BadRequest("Ошибка при добавлении книги в список желаний");
             }
         }
+
         /// <summary>
         /// Удаление книги из списка желаний пользователя
         /// </summary>

@@ -26,7 +26,7 @@ namespace Library.Controllers
         }
 
         /// <summary>
-        /// Создаёт нового автора
+        /// Создание нового автора
         /// </summary>
         /// <param name="authorDto">Данные автора.</param>
         /// <returns>Информация о созданном авторе.</returns>

@@ -40,7 +40,7 @@ namespace Library.Controllers
         public IActionResult GetBooks()
         {
             try
-            {
+            { 
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var books = _repository.Book.GetAllBooks(false).Where(b => b.ListBooks.Any(lb => lb.UserID == userId));
                 var booksDto = _mapper.Map<IEnumerable<BookListDTO>>(books);
@@ -82,11 +82,10 @@ namespace Library.Controllers
         [HttpPost]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
-        public IActionResult CreateBook([FromBody] BookDTO bookDTO)
+        public async Task<IActionResult> CreateBook([FromForm] BookDTO bookDTO)
         {
             if (bookDTO == null)
                 return BadRequest("Некорректные данные книги.");
-
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             var author = _repository.Author.GetAuthorByName(bookDTO.AuthorName, false);
             var genre = _repository.Genre.GetGenreByName(bookDTO.GenreName, false);
@@ -103,47 +102,77 @@ namespace Library.Controllers
                 }
                 return Ok(new { existingBook.Id, Status = "Уже добавлена ранее" });
             }
+            string imagePath = null;
+            if (bookDTO.Image != null && bookDTO.Image.Length > 0)
+            {
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(bookDTO.Image.FileName);
+                var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", fileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
+                using (var stream = new FileStream(savePath, FileMode.Create))
+                {
+                    await bookDTO.Image.CopyToAsync(stream);
+                }
+                imagePath = "/images/" + fileName;
+            }
             var book = _mapper.Map<Book>(bookDTO);
             book.AuthorID = author.Id;
             book.GenreID = genre.Id;
+            book.Image = imagePath;
+            var readingStatus = new ReadingStatus { Status = 0 };
+            _repository.ReadingStatus.CreateReadingStatus(readingStatus);
+            _repository.Save();
+            book.ReadingStatusID = readingStatus.Id;
+            book.ReadingStatus = readingStatus;
             _repository.Book.CreateBook(book);
             _repository.Save();
             _repository.ListBook.Create(new ListBook { UserID = userId, BookID = book.Id });
             _repository.Save();
-            return Ok(new { book.Id, Status = "Не прочитана", Message = "Книга успешно добавлена в библиотеку!" });
+            var fullBook = _repository.Book.GetAllBooks(false).FirstOrDefault(b => b.Id == book.Id && b.ListBooks.Any(lb => lb.UserID == userId));
+            if (fullBook == null)
+                return BadRequest("Ошибка при получении книги после добавления.");
+            var bookDto = _mapper.Map<BookListDTO>(fullBook);
+            return Ok(new
+            {
+                bookDto.Id,
+                bookDto.Title,
+                bookDto.AuthorName,
+                bookDto.Status,
+                Message = "Книга успешно добавлена в библиотеку!"
+            });
         }
 
         /// <summary>
-        /// Обновление информации о прочитанной книге
+        /// Обновление информации о книге. Основные поля (название, жанр, автор, аннотация, количество страниц и обложка) можно изменять всегда. Данные о прочтении (оценка, рецензия, цитаты и даты) — только если установлен статус "прочитана".
         /// </summary>
         /// <param name="id">ID книги</param>
-        /// <param name="updateDto">Новые данные</param>
+        /// <param name="updateDto">Новые данные книги</param>
         /// <returns>Результат обновления</returns>
         /// <response code="200">Книга успешно обновлена</response>
-        /// <response code="400">Редактирование доступно только для прочитанных книг</response>
+        /// <response code="400">Некорректные данные или книга не прочитана</response>
         /// <response code="404">Книга не найдена</response>
         [HttpPost("update/{id}")]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public IActionResult UpdateBook(int id, [FromBody] BookUpdateDTO updateDto)
+        public async Task<IActionResult> UpdateBook(int id, [FromForm] BookUpdateDTO updateDto)
         {
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var book = _repository.Book.GetAllBooks(true)
-                    .FirstOrDefault(b => b.Id == id && b.ListBooks.Any(lb => lb.UserID == userId));
+                var book = _repository.Book.GetAllBooks(true).FirstOrDefault(b => b.Id == id && b.ListBooks.Any(lb => lb.UserID == userId));
                 if (book == null)
                     return NotFound("Книга не найдена.");
-                if (updateDto.Status != 1)
-                    return BadRequest("Редактирование доступно только для прочитанных книг.");
-                _mapper.Map(updateDto, book);
+                if (!string.IsNullOrWhiteSpace(updateDto.Title))
+                    book.Title = updateDto.Title.Trim();
+                if (!string.IsNullOrWhiteSpace(updateDto.Annotation))
+                    book.Annotation = updateDto.Annotation.Trim();
+                if (updateDto.PageCount.HasValue)
+                    book.PageCount = updateDto.PageCount.Value;
                 if (!string.IsNullOrWhiteSpace(updateDto.AuthorName))
                 {
-                    var author = _repository.Author.GetAuthorByName(updateDto.AuthorName.Trim(), false);
-                    if (author == null)
+                    var author = _repository.Author.GetAuthorByName(updateDto.AuthorName.Trim(), false) ?? new Author { AuthorName = updateDto.AuthorName.Trim() };
+                    if (author.Id == 0)
                     {
-                        author = new Author { AuthorName = updateDto.AuthorName.Trim() };
                         _repository.Author.CreateAuthor(author);
                         _repository.Save();
                     }
@@ -151,22 +180,43 @@ namespace Library.Controllers
                 }
                 if (!string.IsNullOrWhiteSpace(updateDto.GenreName))
                 {
-                    var genre = _repository.Genre.GetGenreByName(updateDto.GenreName.Trim(), false);
-                    if (genre == null)
+                    var genre = _repository.Genre.GetGenreByName(updateDto.GenreName.Trim(), false)
+                                 ?? new Genre { GenreName = updateDto.GenreName.Trim() };
+                    if (genre.Id == 0)
                     {
-                        genre = new Genre { GenreName = updateDto.GenreName.Trim() };
                         _repository.Genre.CreateGenre(genre);
                         _repository.Save();
                     }
                     book.GenreID = genre.Id;
                 }
-                bool hasReadingStatusUpdate = updateDto.Rating.HasValue || !string.IsNullOrWhiteSpace(updateDto.Review) | !string.IsNullOrWhiteSpace(updateDto.Quotes) || updateDto.StartReadingDate.HasValue || updateDto.EndReadingDate.HasValue || updateDto.Status.HasValue;
-                if (hasReadingStatusUpdate)
+                if (updateDto.Image != null && updateDto.Image.Length > 0)
+                {
+                    var fileName = Guid.NewGuid() + Path.GetExtension(updateDto.Image.FileName);
+                    var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", fileName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
+                    using (var stream = new FileStream(savePath, FileMode.Create))
+                    {
+                        await updateDto.Image.CopyToAsync(stream);
+                    }
+                    if (!string.IsNullOrEmpty(book.Image))
+                    {
+                        var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", book.Image.TrimStart('/'));
+                        if (System.IO.File.Exists(oldPath))
+                            System.IO.File.Delete(oldPath);
+                    }
+                    book.Image = "/images/" + fileName;
+                }
+                bool hasReadingStatusUpdate = updateDto.Rating.HasValue || !string.IsNullOrWhiteSpace(updateDto.Review) || !string.IsNullOrWhiteSpace(updateDto.Quotes) || updateDto.StartReadingDate.HasValue || updateDto.EndReadingDate.HasValue;
+                if (hasReadingStatusUpdate && updateDto.Status != 1)
+                {
+                    return BadRequest("Поля, связанные с прочтением книги, можно редактировать только если книга помечена как прочитанная (Status = 1).");
+                }
+                if (updateDto.Status == 1)
                 {
                     if (book.ReadingStatus == null)
                     {
                         var readingStatus = _mapper.Map<ReadingStatus>(updateDto);
-                        readingStatus.Status = updateDto.Status ?? 1;
+                        readingStatus.Status = 1;
                         _repository.ReadingStatus.CreateReadingStatus(readingStatus);
                         _repository.Save();
                         book.ReadingStatus = readingStatus;
@@ -175,8 +225,7 @@ namespace Library.Controllers
                     else
                     {
                         _mapper.Map(updateDto, book.ReadingStatus);
-                        if (updateDto.Status.HasValue)
-                            book.ReadingStatus.Status = updateDto.Status.Value;
+                        book.ReadingStatus.Status = 1;
                     }
                 }
                 _repository.Save();
@@ -185,9 +234,10 @@ namespace Library.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Ошибка при обновлении книги: {ex}");
-                return BadRequest();
+                return BadRequest("Ошибка при обновлении книги.");
             }
         }
+
         /// <summary>
         /// Удаление книги из библиотеки пользователя
         /// </summary>
@@ -229,7 +279,6 @@ namespace Library.Controllers
         public IActionResult ImportBook([FromBody] GoogleBookDTO bookDto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
             var author = _repository.Author.GetAuthorByName(bookDto.AuthorName, false);
             if (author == null)
             {
@@ -282,9 +331,10 @@ namespace Library.Controllers
         public IActionResult FilterBooks([FromQuery] BookParameters bookParams)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var books = _repository.Book.GetFilteredBooks(bookParams, false).Where(b => b.ListBooks.Any(lb => lb.UserID == userId));
+            var books = _repository.Book.GetFilteredBooks(bookParams, false).Where(b => b.ListBooks != null && b.ListBooks.Any(lb => lb.UserID == userId));
             var booksDto = _mapper.Map<IEnumerable<BookListDTO>>(books);
             return Ok(booksDto);
         }
+
     }
 }

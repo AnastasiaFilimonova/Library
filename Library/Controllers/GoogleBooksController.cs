@@ -20,7 +20,7 @@ namespace Library.Controllers
             _httpClientFactory = httpClientFactory;
         }
         /// <summary>
-        /// Выполняет поиск книг через Google Books API 
+        /// Поиск книг через Google Books API 
         /// </summary>
         /// <param name="query">Ключевое слово для поиска</param>
         /// <returns>Список книг, найденных в Google Books</returns>
